@@ -1,6 +1,6 @@
 extends Node
 ## Attach to any Node. Keys: A midgame ad, R rewarded ad, G gameplay start/stop, H happytime, U user, F friends,
-## T token, S save, M room message and state, B buy the first store item.
+## T token, E encrypt a score, S save, M room message and state, B buy the first store item.
 ## Press G (gameplay start) before the first A: since SDK 1.6.4 a web build refuses a midgame ad with adCooldown until the game has called gameplay start (or 30 s of visible time passed).
 
 var _playing := false
@@ -51,6 +51,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_T:
 			var token := await ZokoGames.get_user_token_async()
 			print(token.result if token.ok else token.error.code)
+		KEY_E:
+			var enc := await ZokoGames.encrypt_score_async(100.0, "demo-key")
+			print(enc.result if enc.ok else enc.error.code)
 		KEY_S:
 			ZokoGames.set_game_context({"level": 3, "hard": true})
 			ZokoGames.track_order("xsolla", {"sku": "gems_100", "price": 0.99})

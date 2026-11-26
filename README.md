@@ -4,13 +4,14 @@ Godot 4 addon (`addons/zokogames`); it loads in Godot 4.0 or newer, but builds t
 `JavaScriptBridge` in HTML5 exports, and answers with a built-in simulator in the editor and on desktop. It raises signals for
 ads, login, settings and room joins.
 
-Version 1.7.0 (written against the JavaScript SDK `@zoko/sdk` 1.7.0). Changes: [CHANGELOG.md](./CHANGELOG.md).
+Version 1.8.0 (written against the JavaScript SDK `@zoko/sdk` 1.8.0). Changes: [CHANGELOG.md](./CHANGELOG.md).
 Status: run headless in the official Godot 4.3 and 4.7.2 editors on macOS: the addon imports with zero errors and zero warnings, enabling the plugin registers the autoload, every public method and signal behaves as documented in simulator mode, and the Web export (4.3, Thread Support off) contains the bridge. Not yet run in a browser against the live portal; if something fails, send the engine version and the exact error to developer support.
 
 ## Versions
 
 | Wrapper | ZokoGames SDK |
 |---|---|
+| 1.8.0 | @zoko/sdk 1.8.0 |
 | 1.7.0 | @zoko/sdk 1.7.0 |
 | 1.6.2 | @zoko/sdk 1.6.1 |
 | 1.6.1 | @zoko/sdk 1.6.0 |
@@ -90,6 +91,8 @@ Every member of the JavaScript SDK is available. Names follow GDScript snake_cas
 | `banner.requestResponsiveBanner` | `request_responsive_banner(id, window_rect, cb)` / `..._async` |  |
 | `banner.clearBanner` | `clear_banner(id, cb)` / `..._async` |  |
 | `banner.clearAllBanners` | `clear_all_banners(cb)` / `..._async` |  |
+| `banner.hideAllBanners` | `hide_all_banners(cb)` / `..._async` | Added in SDK 1.8.0. Hides every banner without clearing it. |
+| `banner.showAllBanners` | `show_all_banners(cb)` / `..._async` | Added in SDK 1.8.0. Shows the banners hidden by `hide_all_banners`. |
 | `game.settings` | `ZokoGames.settings` | Dictionary `{muteAudio, disableChat, kidsMode}`. `kidsMode` (1.5.0) is absent on older portals: `settings.get("kidsMode", false)`. |
 | `game.addSettingsChangeListener` | `settings_changed` signal | `ZokoGames.settings_changed.connect(fn)`. |
 | `game.removeSettingsChangeListener` | `settings_changed.disconnect(fn)` | Standard signal API. |
@@ -107,8 +110,8 @@ Every member of the JavaScript SDK is available. Names follow GDScript snake_cas
 | `game.isInstantMultiplayer` | `ZokoGames.is_instant_multiplayer` |  |
 | `game.isInstantJoin` | `ZokoGames.is_instant_join` | Deprecated alias. |
 | `game.isOffline` | `ZokoGames.is_offline` | `bool`; false on older SDKs and portals. Simulator: `zokogames/simulator/offline`. |
-| `game.gameId` | Not bound yet (JS only): the next plugin release adds it. | Read-only id the portal sends at init (JS SDK 1.6.2). |
-| `data.mirrorIndexedDB` | Not bound yet (JS only): the next plugin release adds it. | Added in SDK 1.7.0. Must run in the page before the engine starts (the restore finishes before the game reads its files), so it is not a thin pass-through; a game on the web can call `ZokoSDK.data.mirrorIndexedDB` from its own page script before loading the engine. |
+| `game.gameId` | `ZokoGames.get_game_id()` / `ZokoGames.game_id` | Read-only id the portal sends at init (JS SDK 1.6.2); empty before init. The simulator returns `simulated-game`. |
+| `data.mirrorIndexedDB` | HTML shell option `ZOKO_MIRROR_INDEXEDDB` (mirrors user:// before the engine starts); `stop_mirror_indexed_db()` stops it | Added in SDK 1.7.0. See "Cloud save for user:// (IndexedDB mirror)" below. |
 | `game.addOfflineListener` | `offline_changed` signal | `ZokoGames.offline_changed.connect(fn)`; `fn(offline: bool)`. |
 | `game.removeOfflineListener` | `offline_changed.disconnect(fn)` | Standard signal API. |
 | `game.updateRoom` | `update_room(dict, cb)` / `..._async` | `{"roomId", "isJoinable", "inviteParams"}`. |
@@ -153,7 +156,8 @@ Every member of the JavaScript SDK is available. Names follow GDScript snake_cas
 | `user.addAuthListener` | `auth_changed` signal | `auth_changed(user: Dictionary)`. |
 | `user.removeAuthListener` | `auth_changed.disconnect(fn)` |  |
 | `user.showAccountLinkPrompt` | `show_account_link_prompt(cb)` / `..._async` | Result `{"response": "yes"|"no"}`. |
-| `user.submitScore` | `submit_score(encrypted_score, score, cb)` / `..._async` | Pass `""` as `encrypted_score` for a board without an encryption key. |
+| `user.submitScore` | `submit_score(encrypted_score, score, cb)` / `..._async` | Pass `""` as `encrypted_score` for a board without an encryption key. For a board with a key, build the payload with `ZokoGames.encrypt_score(score, KEY, cb)` and pass its result here; keep any manual scheme only as a fallback. |
+| `user.encryptScore` | `encrypt_score(score, key, cb, earned_at)` / `encrypt_score_async(score, key, earned_at)` | Added in SDK 1.8.0. Result is the base64 payload String for `submit_score`; `userNotAuthenticated` for guests, `invalidArgument` for a bad score or key. `earned_at` (Unix ms, default 0 = live run) seals the delayed copy of a score. |
 | `user.getXsollaUserToken` | `get_xsolla_user_token(cb)` / `..._async` | Deprecated alias of `store_get_purchase_token`. |
 | `ERROR_CODES` | `ZokoGames.ERROR_CODES.<module>` | Dictionary of code Arrays per module (`ad`, `banner`, `user`, `data`, `store`, `achievements`, `room`, `general`); `has_error_code(res, code)`. |
 | `ERROR_CODE_DESCRIPTIONS` | Error codes table below | Not shipped as runtime text. |
@@ -176,6 +180,16 @@ Every member of the JavaScript SDK is available. Names follow GDScript snake_cas
 | `achievements.unlock` | `achievements_unlock(key, cb)` / `..._async` | Result `{"ok": true, "unlocked": bool, "achievement": {...}}` or `{"ok": false, "reason": ...}`; guests and unknown keys resolve `ok: false`. |
 | `achievements.onUnlock` | `achievement_unlocked(achievement)` signal |  |
 
+
+## Cloud save for user:// (IndexedDB mirror)
+
+The web export keeps `user://` files in the browser's IndexedDB (`/userfs`). To save them to the player's cloud save, add this line in Export > HTML > Head Include:
+
+```html
+<script>window.ZOKO_MIRROR_INDEXEDDB = true;</script>
+```
+
+The shell restores the cloud copy before the engine starts and uploads later writes within a few seconds. The mirrored data may not exceed 1 MiB, and the data module must be enabled for the game. `ZokoGames.stop_mirror_indexed_db()` stops mirroring.
 
 ## Room data channel
 
