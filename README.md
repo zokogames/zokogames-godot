@@ -4,13 +4,14 @@ Godot 4 addon (`addons/zokogames`); it loads in Godot 4.0 or newer, but builds t
 `JavaScriptBridge` in HTML5 exports, and answers with a built-in simulator in the editor and on desktop. It raises signals for
 ads, login, settings and room joins.
 
-Version 1.8.0 (written against the JavaScript SDK `@zoko/sdk` 1.8.0). Changes: [CHANGELOG.md](./CHANGELOG.md).
+Version 1.8.1 (written against the JavaScript SDK `@zoko/sdk` 1.8.0). Changes: [CHANGELOG.md](./CHANGELOG.md).
 Status: run headless in the official Godot 4.3 and 4.7.2 editors on macOS: the addon imports with zero errors and zero warnings, enabling the plugin registers the autoload, every public method and signal behaves as documented in simulator mode, and the Web export (4.3, Thread Support off) contains the bridge. Not yet run in a browser against the live portal; if something fails, send the engine version and the exact error to developer support.
 
 ## Versions
 
 | Wrapper | ZokoGames SDK |
 |---|---|
+| 1.8.1 | @zoko/sdk 1.8.0 |
 | 1.8.0 | @zoko/sdk 1.8.0 |
 | 1.7.0 | @zoko/sdk 1.7.0 |
 | 1.6.2 | @zoko/sdk 1.6.1 |
